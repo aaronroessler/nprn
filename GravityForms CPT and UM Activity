@@ -1,0 +1,57 @@
+class GFActions {
+   private $entry_id;
+    
+    public function __construct() {
+      add_filter('gform_post_data_2', array($this, 'save_entry_id'), 999999, 3);
+      add_action('save_post', array($this, 'um_activity_new_classified'), 10, 1);
+    }
+  
+    public function save_entry_id($post_data, $form, $entry) {
+         $post_data['post_type'] = 'classifieds';
+        $this->entry_id =  rgar( $entry, 'id' );
+        return $post_data;
+   }
+  
+    public function um_activity_new_classified($post_id ) {
+
+      if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+      $post = get_post($post_id);
+
+                $author_id = get_current_user_id();
+                um_fetch_user( $author_id );
+                
+                $author_name = um_user('display_name');
+                $author_profile = um_user_profile_url();
+
+             if (has_post_thumbnail( $post_id ) ) {
+                $image = wp_get_attachment_image_src( get_post_thumbnail_id( $post_id ), 'large' );
+                $post_image = '<span><img src="'. $image[0] . '" alt="" title="" /></span>';
+                } else {
+                $post_image = '';
+                }
+              
+                if ( $post->post_excerpt ) {
+                    $post_excerpt = '<span class="post-excerpt">' . wp_trim_words( $post->post_excerpt, $num_words = 25, $more = null ) . '</span>';
+                } else {
+                    $post_excerpt = '';
+                }
+
+                if ( 'classifieds' !== $post->post_type || $post->post_status!='publish')
+                return;
+
+        UM()->Activity_API()->api()->save(
+        array(
+          'template' => 'classifieds-submission',
+          'wall_id' => $user_id,
+          'author' => $author_id,
+          'author_name' => $author_name,
+          'post_title' => '<span class="post-title">' . $post->post_title . '</span>',
+          'post_excerpt' => $post_excerpt,
+          'author_profile' => $author_profile,
+          'post_url' =>  'https://newnprn.wpengine.com/classifieds/entry/' . $this->entry_id, 
+          'post_image' => $post_image,
+        )
+      );         
+    }
+  }
+  $gfActions = new GFActions();  
